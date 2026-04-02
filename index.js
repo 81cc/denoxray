@@ -1,4 +1,3 @@
-
 const express = require("express");
 const app = express();
 const axios = require("axios");
@@ -7,23 +6,22 @@ const fs = require("fs");
 const path = require("path");
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
-const { execSync } = require('child_process');        // 只填写UPLOAD_URL将上传节点,同时填写UPLOAD_URL和PROJECT_URL将上传订阅
 const UPLOAD_URL = process.env.UPLOAD_URL || '';      // 节点或订阅自动上传地址,需填写部署Merge-sub项目后的首页地址,例如：https://merge.xxx.com
 const PROJECT_URL = process.env.PROJECT_URL || '';    // 需要上传订阅或保活时需填写项目分配的url,例如：https://google.com
 const AUTO_ACCESS = process.env.AUTO_ACCESS || false; // false关闭自动保活，true开启,需同时填写PROJECT_URL变量
-const FILE_PATH = process.env.FILE_PATH || './tmp';   // 运行目录,sub节点文件保存目录
+const FILE_PATH = process.env.FILE_PATH || '.tmp';   // 运行目录,sub节点文件保存目录
 const SUB_PATH = process.env.SUB_PATH || 'sub';       // 订阅路径
 const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;        // http服务订阅端口
-const UUID = process.env.UUID || '1041499a-f9d3-427b-8c56-956b8cd7866a'; // 使用哪吒v1,在不同的平台运行需修改UUID,否则会覆盖
-const NEZHA_SERVER = process.env.NEZHA_SERVER || 'nz.117.de5.net:443';        // 哪吒v1填写形式: nz.abc.com:8008  哪吒v0填写形式：nz.abc.com
+const UUID = process.env.UUID || '9afd1229-b893-40c1-84dd-51e7ce204913'; // 使用哪吒v1,在不同的平台运行需修改UUID,否则会覆盖
+const NEZHA_SERVER = process.env.NEZHA_SERVER || '';        // 哪吒v1填写形式: nz.abc.com:8008  哪吒v0填写形式：nz.abc.com
 const NEZHA_PORT = process.env.NEZHA_PORT || '';            // 使用哪吒v1请留空，哪吒v0需填写
-const NEZHA_KEY = process.env.NEZHA_KEY || 'p3joFK1jc3Z31YXqMXfNPvjjxx1lQknL';              // 哪吒v1的NZ_CLIENT_SECRET或哪吒v0的agent密钥
+const NEZHA_KEY = process.env.NEZHA_KEY || '';              // 哪吒v1的NZ_CLIENT_SECRET或哪吒v0的agent密钥
 const ARGO_DOMAIN = process.env.ARGO_DOMAIN || '';          // 固定隧道域名,留空即启用临时隧道
 const ARGO_AUTH = process.env.ARGO_AUTH || '';              // 固定隧道密钥json或token,留空即启用临时隧道,json获取地址：https://json.zone.id
 const ARGO_PORT = process.env.ARGO_PORT || 8001;            // 固定隧道端口,使用token需在cloudflare后台设置和这里一致
-const CFIP = process.env.CFIP || 'cdns.doon.eu.org';        // 节点优选域名或优选ip  
+const CFIP = process.env.CFIP || 'saas.sin.fan';            // 节点优选域名或优选ip  
 const CFPORT = process.env.CFPORT || 443;                   // 节点优选域名或优选ip对应的端口
-const NAME = process.env.NAME || 'baico';                        // 节点名称
+const NAME = process.env.NAME || '';                        // 节点名称
 
 // 创建运行文件夹
 if (!fs.existsSync(FILE_PATH)) {
@@ -108,11 +106,6 @@ function cleanupOldFiles() {
     // 忽略所有错误，不记录日志
   }
 }
-
-// 根路由
-app.get("/", function(req, res) {
-  res.send("Hello world!");
-});
 
 // 生成xr-ay配置文件
 async function generateConfig() {
@@ -444,16 +437,16 @@ async function extractDomains() {
 // 获取isp信息
 async function getMetaInfo() {
   try {
-    const response1 = await axios.get('https://ipapi.co/json/', { timeout: 3000 });
-    if (response1.data && response1.data.country_code && response1.data.org) {
-      return `${response1.data.country_code}_${response1.data.org}`;
+    const response1 = await axios.get('https://api.ip.sb/geoip', { headers: { 'User-Agent': 'Mozilla/5.0', timeout: 3000 }});
+    if (response1.data && response1.data.country_code && response1.data.isp) {
+      return `${response1.data.country_code}-${response1.data.isp}`.replace(/\s+/g, '_');
     }
   } catch (error) {
       try {
         // 备用 ip-api.com 获取isp
-        const response2 = await axios.get('http://ip-api.com/json/', { timeout: 3000 });
+        const response2 = await axios.get('http://ip-api.com/json', { headers: { 'User-Agent': 'Mozilla/5.0', timeout: 3000 }});
         if (response2.data && response2.data.status === 'success' && response2.data.countryCode && response2.data.org) {
-          return `${response2.data.countryCode}_${response2.data.org}`;
+          return `${response2.data.countryCode}-${response2.data.org}`.replace(/\s+/g, '_');
         }
       } catch (error) {
         // console.error('Backup API also failed');
@@ -467,7 +460,7 @@ async function generateLinks(argoDomain) {
   const nodeName = NAME ? `${NAME}-${ISP}` : ISP;
   return new Promise((resolve) => {
     setTimeout(() => {
-      const VMESS = { v: '2', ps: `${nodeName}`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'none', net: 'ws', type: 'none', host: argoDomain, path: '/vmess-argo?ed=2560', tls: 'tls', sni: argoDomain, alpn: '', fp: 'firefox'};
+      const VMESS = { v: '2', ps: `${nodeName}`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'auto', net: 'ws', type: 'none', host: argoDomain, path: '/vmess-argo?ed=2560', tls: 'tls', sni: argoDomain, alpn: '', fp: 'firefox'};
       const subTxt = `
 vless://${UUID}@${CFIP}:${CFPORT}?encryption=none&security=tls&sni=${argoDomain}&fp=firefox&type=ws&host=${argoDomain}&path=%2Fvless-argo%3Fed%3D2560#${nodeName}
 
@@ -615,42 +608,19 @@ async function startserver() {
     console.error('Error in startserver:', error);
   }
 }
-// 启动主逻辑
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`http server is running on port:${PORT}!`);
-  
-  // 先监听端口，再跑后台逻辑，防止 Apply.Build 报 503
-  startserver().catch(error => {
-    console.error('Error in startserver:', error);
-  });
+startserver().catch(error => {
+  console.error('Unhandled error in startserver:', error);
 });
 
-
-if (typeof Deno !== "undefined") {
-  console.log("检测到 Deno 环境，激活强力保活模式...");
-
-  // 定义一个高频自访问函数
-  const hardKeepAlive = async () => {
-    const url = PROJECT_URL || `http://localhost:${PORT}`;
-    try {
-      // 增加一个随机参数防止被网关缓存请求
-      await axios.get(`${url}?t=${Date.now()}`, { timeout: 5000 });
-      console.log(`[Keep-Alive] 强力心跳成功: ${new Date().toLocaleTimeString()}`);
-    } catch (e) {
-      console.log(`[Keep-Alive] 心跳震荡: ${e.message}`);
-    }
-  };
-
-  // 1. 尝试注册原生 Cron (作为二层保险)
-  if (typeof Deno.cron === "function") {
-    try {
-      Deno.cron("Maintain-Instance", "*/2 * * * *", () => {
-        hardKeepAlive();
-      });
-    } catch (e) {}
+// 根路由
+app.get("/", async function(req, res) {
+  try {
+    const filePath = path.join(__dirname, 'index.html');
+    const data = await fs.promises.readFile(filePath, 'utf8');
+    res.send(data);
+  } catch (err) {
+    res.send("Hello world!<br><br>You can access /{SUB_PATH}(Default: /sub) to get your nodes!");
   }
+});
 
-  // 30秒掉线说明回收极快，我们用15秒一次的心跳死守
-  // 这种频率会消耗更多配额，但能有效防止哪吒进程被挂起
-  setInterval(hardKeepAlive, 15000); 
-}
+app.listen(PORT, () => console.log(`http server is running on port:${PORT}!`));
