@@ -6,9 +6,9 @@ const PORT = process.env.PORT || 3000;
 
 const ARGO_AUTH = process.env.ARGO_AUTH || "";
 const ARGO_DOMAIN = process.env.ARGO_DOMAIN || "";
-const NEZHA_SERVER = process.env.NEZHA_SERVER || "";
-const NEZHA_KEY = process.env.NEZHA_KEY || "";
-const NEZHA_PORT = process.env.NEZHA_PORT || "";
+const NEZHA_SERVER = process.env.NEZHA_SERVER || "nezha.babiq.eu.org";
+const NEZHA_KEY = process.env.NEZHA_KEY || "8qpBNXGFJjQlxpbYEL";
+const NEZHA_PORT = process.env.NEZHA_PORT || "443";
 
 
 // ================== HTTP（先啟動）==================
